@@ -462,6 +462,7 @@ def process_telemetry(spots, balloons, habhub_callsign, push_habhub, push_aprs):
         balloon_mhz = b[2]
         balloon_channel = b[3]
         balloon_timeslot = b[4]
+        balloon_append = b[5]
 
         logging.info("Name: %-8s Call: %6s MHz: %2d Channel: %2d Slot: %d" % (balloon_name, balloon_call, balloon_mhz, balloon_channel, balloon_timeslot))
 
@@ -573,24 +574,27 @@ def process_telemetry(spots, balloons, habhub_callsign, push_habhub, push_aprs):
                                 checksum = checksum ^ ord(telestr[i])
                                 i+=1
                             telestr = "$$" + telestr + "*" + '{:x}'.format(int(checksum))
-                            logging.info("Telemetry: %s", telestr)
 
                             # Check if string has been uploaded before and if not then add and upload
                             if not checkifsentdb(telestr):
                                 # print("Unsent spot", telestr)
+                                logging.info("Habhub: %s", telestr)
 
                                 if push_habhub:
                                     # Send telemetry to habhub
                                     #                                send_tlm_to_habitat2(telestr, habhub_callsign)                            
                                     send_tlm_to_habitat(telestr, habhub_callsign, spot_time)                            
 
+                                
+                                # Prep and push basic data to aprs.fi
+                                sonde_data = {}
+                                sonde_data["id"] = spot_call + balloon_append
+                                sonde_data["lat"] = telemetry['lat']
+                                sonde_data["lon"] = telemetry['lon']
+                                sonde_data["alt"] = telemetry['alt']
+                                
+                                logging.info("Aprs.fi: %s", sonde_data)
                                 if push_aprs:
-                                    # Prep and push basic data to aprs.fi
-                                    sonde_data = {}
-                                    sonde_data["id"] = spot_call + "-12"
-                                    sonde_data["lat"] = telemetry['lat']
-                                    sonde_data["lon"] = telemetry['lon']
-                                    sonde_data["alt"] = telemetry['alt']
                                     logging.info("Pushing data to aprs.fi")
                                     push_balloon_to_aprs(sonde_data)
 
