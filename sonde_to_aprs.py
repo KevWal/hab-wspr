@@ -18,12 +18,14 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+import logging
 import configparser
 import time, datetime, urllib3, sys
 from socket import *
 
 # APRS-IS login info
 serverHost = 'euro.aprs2.net' # Pick a local server if you like
+#serverHost = 'second.aprs.net'
 serverPort = 14580
 
 config = configparser.ConfigParser()
@@ -45,7 +47,7 @@ def get_sonde():
 	return sonde_data
 
 # Push a Radiosonde data packet to APRS as an object.
-def push_balloon_to_aprs(sonde_data):
+def push_balloon_to_aprs(sonde_data, telestr):
 	# Pad or limit the sonde ID to 9 characters.
 	object_name = sonde_data["id"]
 	if len(object_name) > 9:
@@ -74,26 +76,38 @@ def push_balloon_to_aprs(sonde_data):
 	lon_str = "%03d%s" % (lon_degree,lon_min_str) + lon_dir
 	
 	# Convert Alt (in metres) to feet
-	alt = int(float(sonde_data["alt"])/0.3048)
+	alt = int(float(sonde_data["alt"])/0.3048)  #KW add /20 to keep alt under 2000ft
 	
 	# Produce the APRS object string.
-	out_str = ";%s*111111z%s/%sO000/000/A=%06d Balloon" % (object_name,lat_str,lon_str,alt)
-	print(out_str)
+	out_str = ";%s*111111z%s/%sO000/000/A=%06d Balloon %s" % (object_name,lat_str,lon_str,alt,telestr)
+	logging.info("push_balloon_to_aprs() sending: %s", out_str)
 
 	# Connect to an APRS-IS server, login, then push our object position in.
-	
-	# create socket & connect to server
-	sSock = socket(AF_INET, SOCK_STREAM)
-	sSock.connect((serverHost, serverPort))
-	# logon
-	sSock.send(b'user %s pass %s vers VK5QI-Python 0.01\n' % (aprsUser.encode('utf-8'), aprsPass.encode('utf-8')) )
-	# send packet
-	sSock.send(b'%s>APRS:%s\n' % (callsign.encode('utf-8'), out_str.encode('utf-8')) )
-
-	# close socket
-	sSock.shutdown(0)
-	sSock.close()
-
+	for attempts in range(3):
+		try:	
+			# create socket & connect to server
+			sSock = socket(AF_INET, SOCK_STREAM)
+			sSock.connect((serverHost, serverPort))
+			logging.info("sSock.connected")
+			# logon
+			#sSock.send(b'user %s pass %s vers VK5QI-Python 0.01\n' % (aprsUser.encode('utf-8'), aprsPass.encode('utf-8')) )
+			tosend = "user %s pass %s vers VK5QI-Python 0.01\n" % (aprsUser,aprsPass)
+			logging.info(tosend)
+			sSock.send(tosend.encode('utf-8'))
+			# send packet
+			#sSock.send(b'%s>APRS:%s\n' % (callsign.encode('utf-8'), out_str.encode('utf-8')) )
+			tosend = "%s>APRS:%s\n" % (callsign,out_str)
+			logging.info(tosend)
+			sSock.send(tosend.encode('utf-8'))
+			# close socket
+			sSock.shutdown(0)
+			sSock.close()
+			time.sleep(10)
+			break
+		except (sSock.error, sSock.timeout, sSock.gaierror) as err:
+			logging.info("Error: Unable to connect to APRS-IS server, packet dropped! %s", err) 
+		finally:
+			sSock.close()
 
 
 # VE3OCL-11:PARM.Speed,Temp,Vbat,GPS,Sats
@@ -104,14 +118,9 @@ def push_balloon_to_aprs(sonde_data):
 # $speed = int(($speed * 10) + 0.5);
 # $temp = int((($temp + 273.2) * 10) + 0.5);
 # $vbat = int(($vbat * 1000) + 0.5);
-	
-
-
-
 
 # For explanation of encoding see:
 # http://he.fi/doc/aprs-base91-comment-telemetry.txt
-
 
 # sub usage ()
 # {

@@ -1,4 +1,4 @@
-# From ttps://github.com/scivision/maidenhead
+# From https://github.com/scivision/maidenhead
 
 """## mlocs - Maidenhead
 toMaiden([lat, lon], level) returns a char (len = lvl*2)

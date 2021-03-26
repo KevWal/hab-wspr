@@ -1,0 +1,15 @@
+#!/bin/bash
+
+sleep 5;
+
+trap 2;
+cd /usr/local/hab-wspr;
+
+while true;
+do
+ ./webscrape.py;
+ sleep 2
+ echo ""
+ echo ""
+done;
+

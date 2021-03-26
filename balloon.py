@@ -10,7 +10,7 @@ import sys
 def balloonstodb(balloons):
         con = None
 
-        print("Writing balloons do db")
+        logging.info("Writing balloons do db")
         try:
             con = sqlite3.connect('wsprdb.db')
             cur = con.cursor()
@@ -18,7 +18,7 @@ def balloonstodb(balloons):
             cur.execute('create table if not exists balloons(name varchar(20), call varchar(10), freq integer, channel integer)')
             for row in balloons:
                 cur.execute("INSERT INTO balloons VALUES(?,?,?,?)", (row))
-                print(row)
+                logging.info(row)
             data = cur.fetchall()
             if not data:
                 con.commit()
@@ -37,26 +37,26 @@ def readballoonsdb():
     balloons = []
     data = []
 
-    print("Reading balloons from db")
+    logging.info("Reading balloons from db")
     try:
         con = sqlite3.connect('wsprdb.db')
         cur = con.cursor()
         cur.execute('select * from balloons')
         data = cur.fetchall()
         for row in data:
-            print(row)
+            logging.info(row)
             balloons.append(list(row))
 
         if not data:
             con.commit()
     except sqlite3.Error as e:
-        print("Database error: %s" % e)
+        logging.info("Database error: %s" % e)
     except Exception as e:
-        print("Exception in _query: %s" % e)
+        logging.info("Exception in _query: %s" % e)
     finally:
         if con:
             con.close()
-#    print("Loaded balloons:", len(balloons))
+#    logging.info("Loaded balloons:", len(balloons))
     return balloons
 
 # Dumps all spots to csv-file
@@ -74,11 +74,11 @@ def dumpcsv(spotlist):
 
 
 # Org-csv
-#  Date Call Frequency SNR Drift Grid dBm W reporter locator dist-km dist-mi 
-# 2018-05-21 19:04,F6HCO,10.140216,-11,1,J19bg,+33,1.995,SM0EPX/RX2,JO89si,1495,929
+#  Date,               Call,   Freq,      SNR, Drft, Grid,  dBm,  W,    Reporter,  Locator, Dist-km, Dist-mi 
+# 2018-05-21 19:04,    F6HCO,  10.140216, -11,   1 , J19bg, +33, 1.995, SM0EPX/RX2, JO89si, 1495,    929
 
-# 2018-05-03 13:06:00, QA5IQA, 7.040161, -8, JO53, 27, DH5RAE, JN68qv, 537
-# 0                    1       2         3   4     5   6       7       8 
+# 2018-05-03 13:06:00, QA5IQA, 7.040161,  -8, JO53, 27, DH5RAE, JN68qv, 537
+# 0                    1       2          3   4     5   6       7       8 
 
 # 2018-06-14 09:08,QA5IQB,5.288761,-26,0,JO22,+20,DL0HT,JO43jb,266
 # 0                1      2         3  4 5    6   7     8      9
@@ -89,9 +89,9 @@ def dumpcsv(spotlist):
 
 #  timestamp, tx_call, freq real, snr integer, drift integer, tx_loc, power , rx_call, rx_loc, distance
 
-def readcsv():
+def readcsv(csv_file):
         spots = []
-        with open('spots.csv', newline='') as csvfile:
+        with open(csv_file, newline='') as csvfile:
                 spotsreader = csv.reader(csvfile, delimiter=',', quotechar='|')
 
                 for row in spotsreader:
@@ -104,12 +104,12 @@ def readcsv():
                         row[6] = int(row[6].replace('+',''))
                         row[9] = int(row[9])
                         
-                        # print(row)
+                        # logging.info(row)
                         spots.append(row)
 
         csvfile.close()
         logging.info("Loaded spots: %s", len(spots))
-        #print("First",spots[1:][0])
-        #print("Last",spots[-1:][0])
+        logging.info("First",spots[1:][0])
+        logging.info("Last",spots[-1:][0])
 
         return spots
